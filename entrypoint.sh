@@ -15,4 +15,8 @@ done
 
 # Start Forgejo runner daemon, using Podman socket
 export DOCKER_HOST="unix://${SOCK}"
+./forgejo-runner register \
+    --no-interactive \
+    --token "${FORGEJO_TOKEN}" \
+    --instance "${FORGEJO_URL}"
 exec ./forgejo-runner daemon
