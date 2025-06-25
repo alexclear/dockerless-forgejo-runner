@@ -8,9 +8,7 @@ RUN useradd -m forgejo
 
 USER forgejo
 WORKDIR /home/forgejo
-RUN curl -L -o forgejo-runner.tar.gz https://codeberg.org/forgejo/runner/releases/latest/download/forgejo-runner-linux-amd64.tar.gz && \
-    tar -xzf forgejo-runner.tar.gz && \
-    rm forgejo-runner.tar.gz && \
+RUN curl -L -o forgejo-runner https://code.forgejo.org/forgejo/runner/releases/download/v6.3.1/forgejo-runner-6.3.1-linux-amd64 && \
     chmod +x forgejo-runner
 
 COPY --chown=forgejo:forgejo entrypoint.sh /entrypoint.sh
