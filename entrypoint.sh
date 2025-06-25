@@ -5,7 +5,7 @@ set -e
 podman system service -t 0 &
 
 # Wait for the Podman socket to be available
-SOCK="$XDG_RUNTIME_DIR/podman/podman.sock"
+SOCK="/tmp/podman-run-1001/podman/podman.sock"
 for i in {1..10}; do
     if [ -S "$SOCK" ]; then
         break
