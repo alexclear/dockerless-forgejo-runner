@@ -12,6 +12,7 @@ fi
 
 # Patch config.yml: set container.valid_volumes to ["**"]
 yq -i -y '.container.valid_volumes = ["**"]' "$CONFIG"
+yq -i -y '.runner.labels |= ( (. // []) + ["self-hosted:host://-", "docker:docker://node:20-bullseye"] | unique )' "$CONFIG"
 
 echo "Final runner config:"
 cat "$CONFIG"
