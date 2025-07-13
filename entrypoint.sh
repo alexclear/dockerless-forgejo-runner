@@ -11,7 +11,7 @@ if [[ ! -f "$CONFIG" ]]; then
 fi
 
 # Patch config.yml: set container.valid_volumes to ["**"]
-yq -i '.container.valid_volumes = ["**"]' "$CONFIG"
+yq -i -y '.container.valid_volumes = ["**"]' "$CONFIG"
 
 echo "Final runner config:"
 cat "$CONFIG"
