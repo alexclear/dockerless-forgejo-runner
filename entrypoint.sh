@@ -10,10 +10,6 @@ if [[ ! -f "$CONFIG" ]]; then
     ./forgejo-runner generate-config > "$CONFIG"
 fi
 
-
-# Install yq for YAML manipulation
-apt-get update && apt-get install -y yq
-
 # Patch config.yml: set container.valid_volumes to ["**"]
 yq -i '.container.valid_volumes = ["**"]' "$CONFIG"
 
