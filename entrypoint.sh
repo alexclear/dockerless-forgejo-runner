@@ -1,24 +1,39 @@
 #!/bin/bash
-set -e
+set -euxo pipefail
 
-podman system service -t 0 > /dev/stdout 2>&1 &
+echo "Entrypoint started as user: $(id -u):$(id -g), pwd: $PWD"
+ls -ld /home/forgejo /home/forgejo/rundir || true
+
+mkdir -p /home/forgejo/rundir/libpod
+ls -ld /home/forgejo/rundir /home/forgejo/rundir/libpod
+
+# Launch podman system service in debug mode
+podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
 
-# Wait for socket
-SOCK="/tmp/podman-run-1001/podman/podman.sock"
+# Wait for podman socket (use correct path)
+SOCK="/run/user/$(id -u)/podman/podman.sock"
 for i in {1..10}; do
     if [ -S "$SOCK" ]; then
+        echo "Found podman socket at $SOCK"
         break
     fi
-    echo "Waiting for the Podman socket to appear"
+    echo "Waiting for the Podman socket to appear at $SOCK"
     sleep 1
 done
 
-# Start Forgejo runner
+# Start Forgejo runner registration
 export DOCKER_HOST="unix://${SOCK}"
-./forgejo-runner register --no-interactive --token "${FORGEJO_TOKEN}" --instance "${FORGEJO_URL}"
+./forgejo-runner register --no-interactive --token "${FORGEJO_TOKEN}" --instance "${FORGEJO_URL}" || { echo "Runner registration failed!"; exit 1; }
 
-# Wait for both processes (podman + runner)
+# Start Forgejo runner daemon in background
 ./forgejo-runner daemon > /dev/stdout 2>&1 &
+RUNNER_PID=$!
 
-wait -n $PODMAN_PID
+echo "PIDs: podman=$PODMAN_PID runner=$RUNNER_PID"
+
+# Wait for any process to exit and print status
+wait -n $PODMAN_PID $RUNNER_PID
+STATUS=$?
+echo "Entrypoint exiting, status $STATUS"
+exit $STATUS
