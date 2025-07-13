@@ -10,13 +10,12 @@ if [[ ! -f "$CONFIG" ]]; then
     ./forgejo-runner generate-config > "$CONFIG"
 fi
 
-# Patch valid_volumes to allow all
-if ! grep -q 'valid_volumes:' "$CONFIG"; then
-    echo "valid_volumes: ['**']" >> "$CONFIG"
-elif ! grep -q "'\*\*'" "$CONFIG"; then
-    # If valid_volumes exists but doesn't allow all, patch it in-place (yq preferred, else sed/hack)
-    sed -i '/valid_volumes:/c\valid_volumes:\n  - '\''**'\''' "$CONFIG"
-fi
+
+# Install yq for YAML manipulation
+apt-get update && apt-get install -y yq
+
+# Patch config.yml: set container.valid_volumes to ["**"]
+yq -i '.container.valid_volumes = ["**"]' "$CONFIG"
 
 echo "Final runner config:"
 cat "$CONFIG"
