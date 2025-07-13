@@ -16,6 +16,8 @@ yq -i -y '.container.valid_volumes = ["**"]' "$CONFIG"
 echo "Final runner config:"
 cat "$CONFIG"
 
+echo -e '[storage.options]\nmount_program = "/usr/bin/fuse-overlayfs"' > /etc/containers/storage.conf
+
 # Start podman system service in debug mode
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
