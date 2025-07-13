@@ -16,7 +16,15 @@ yq -i -y '.container.valid_volumes = ["**"]' "$CONFIG"
 echo "Final runner config:"
 cat "$CONFIG"
 
-echo -e '[storage.options]\nmount_program = "/usr/bin/fuse-overlayfs"' > /etc/containers/storage.conf
+cat >/etc/containers/storage.conf <<EOF
+[storage]
+driver = "overlay"
+runroot = "/var/run/containers/storage"
+graphroot = "/var/lib/containers/storage"
+
+[storage.options]
+mount_program = "/usr/bin/fuse-overlayfs"
+EOF
 
 # Start podman system service in debug mode
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
