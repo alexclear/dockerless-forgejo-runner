@@ -2,17 +2,13 @@
 set -euxo pipefail
 
 echo "Entrypoint started as user: $(id -u):$(id -g), pwd: $PWD"
-ls -ld /home/forgejo /home/forgejo/rundir || true
-
-mkdir -p /home/forgejo/rundir/libpod
-ls -ld /home/forgejo/rundir /home/forgejo/rundir/libpod
 
 # Launch podman system service in debug mode
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
 
 # Wait for podman socket (use correct path)
-SOCK="/run/user/$(id -u)/podman/podman.sock"
+SOCK="/run/podman/podman.sock"
 for i in {1..10}; do
     if [ -S "$SOCK" ]; then
         echo "Found podman socket at $SOCK"
