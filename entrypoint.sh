@@ -17,7 +17,24 @@ yq -i -y '.runner.labels |= ( (. // []) + ["self-hosted:host://-", "docker:docke
 echo "Final runner config:"
 cat "$CONFIG"
 
-cat >/etc/containers/storage.conf <<EOF
+# Write a kernel-overlay-first config
+cat >/etc/containers/storage.conf <<'EOF'
+[storage]
+driver = "overlay"
+runroot = "/var/run/containers/storage"
+graphroot = "/var/lib/containers/storage"
+
+[storage.options.overlay]
+# big wins for metadata-heavy workloads
+mountopt = "metacopy=on"
+# optional: add ",volatile" for even more speed (accept crash-recovery risk in CI)
+# mountopt = "metacopy=on,volatile"
+EOF
+
+# Try kernel overlayfs; if unavailable, fall back to fuse-overlayfs
+if ! podman info --format '{{.Store.GraphOptions}} {{.Store.GraphDriverName}} {{.Store.GraphStatus}}' 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
+  echo "Kernel overlayfs not available, switching to fuse-overlayfs..."
+  cat >/etc/containers/storage.conf <<'EOF'
 [storage]
 driver = "overlay"
 runroot = "/var/run/containers/storage"
@@ -26,6 +43,7 @@ graphroot = "/var/lib/containers/storage"
 [storage.options]
 mount_program = "/usr/bin/fuse-overlayfs"
 EOF
+fi
 
 # Start podman system service in debug mode
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &

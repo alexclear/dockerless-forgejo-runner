@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 RUN apt-get update && \
-    apt-get install -y yq fuse-overlayfs podman curl ca-certificates nodejs npm && \
+    apt-get install -y tini yq fuse-overlayfs podman curl ca-certificates nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m forgejo
@@ -13,4 +13,4 @@ RUN curl -L -o forgejo-runner https://code.forgejo.org/forgejo/runner/releases/d
 COPY --chown=forgejo:forgejo entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini","--","/entrypoint.sh"]
