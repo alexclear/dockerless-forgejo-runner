@@ -17,24 +17,23 @@ yq -i -y '.runner.labels |= ( (. // []) + ["self-hosted:host://-", "docker:docke
 echo "Final runner config:"
 cat "$CONFIG"
 
-# Write a kernel-overlay-first config
-cat >/etc/containers/storage.conf <<'EOF'
+# --- storage config files ---
+KERNEL_STORAGE_CONF=/etc/containers/storage-koverlay.conf
+FUSE_STORAGE_CONF=/etc/containers/storage-fuse.conf
+
+# Prefer kernel overlayfs (no mount_program!)
+cat >"$KERNEL_STORAGE_CONF" <<'EOF'
 [storage]
 driver = "overlay"
 runroot = "/var/run/containers/storage"
 graphroot = "/var/lib/containers/storage"
 
 [storage.options.overlay]
-# big wins for metadata-heavy workloads
 mountopt = "metacopy=on"
-# optional: add ",volatile" for even more speed (accept crash-recovery risk in CI)
-# mountopt = "metacopy=on,volatile"
 EOF
 
-# Try kernel overlayfs; if unavailable, fall back to fuse-overlayfs
-if ! podman info --format '{{.Store.GraphOptions}} {{.Store.GraphDriverName}} {{.Store.GraphStatus}}' 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
-  echo "Kernel overlayfs not available, switching to fuse-overlayfs..."
-  cat >/etc/containers/storage.conf <<'EOF'
+# Explicit FUSE fallback (only if kernel overlay fails)
+cat >"$FUSE_STORAGE_CONF" <<'EOF'
 [storage]
 driver = "overlay"
 runroot = "/var/run/containers/storage"
@@ -43,22 +42,32 @@ graphroot = "/var/lib/containers/storage"
 [storage.options]
 mount_program = "/usr/bin/fuse-overlayfs"
 EOF
-fi
 
-# Start podman system service in debug mode
+# Tell Podman exactly which config to use:
+export CONTAINERS_STORAGE_CONF="$KERNEL_STORAGE_CONF"
+
+# (Optional but helpful) quick kernel overlay presence hint
+grep -q overlay /proc/filesystems || true
+
+# Start podman service with kernel overlay config
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
 
-# Wait for podman socket (use correct path)
+# Wait for socket
 SOCK="/run/podman/podman.sock"
-for i in {1..10}; do
-    if [ -S "$SOCK" ]; then
-        echo "Found podman socket at $SOCK"
-        break
-    fi
-    echo "Waiting for the Podman socket to appear at $SOCK"
-    sleep 1
+for i in {1..20}; do
+  [ -S "$SOCK" ] && break
+  sleep 0.5
 done
+
+# Verify kernel overlay actually active; else switch to FUSE once
+if ! podman info 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
+  echo "Kernel overlayfs not active -> switching to fuse-overlayfs"
+  kill "$PODMAN_PID" || true
+  export CONTAINERS_STORAGE_CONF="$FUSE_STORAGE_CONF"
+  podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
+  PODMAN_PID=$!
+fi
 
 # Start Forgejo runner registration with the custom config
 export DOCKER_HOST="unix://${SOCK}"
