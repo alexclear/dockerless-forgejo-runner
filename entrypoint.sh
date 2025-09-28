@@ -61,13 +61,13 @@ for i in {1..20}; do
 done
 
 # Verify kernel overlay actually active; else switch to FUSE once
-if ! podman info 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
-  echo "Kernel overlayfs not active -> switching to fuse-overlayfs"
-  kill "$PODMAN_PID" || true
-  export CONTAINERS_STORAGE_CONF="$FUSE_STORAGE_CONF"
-  podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
-  PODMAN_PID=$!
-fi
+#if ! podman info 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
+#  echo "Kernel overlayfs not active -> switching to fuse-overlayfs"
+#  kill "$PODMAN_PID" || true
+#  export CONTAINERS_STORAGE_CONF="$FUSE_STORAGE_CONF"
+#  podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
+#  PODMAN_PID=$!
+#fi
 
 # Start Forgejo runner registration with the custom config
 export DOCKER_HOST="unix://${SOCK}"
