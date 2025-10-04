@@ -19,7 +19,6 @@ cat "$CONFIG"
 
 # --- storage config files ---
 KERNEL_STORAGE_CONF=/etc/containers/storage-koverlay.conf
-FUSE_STORAGE_CONF=/etc/containers/storage-fuse.conf
 
 # Prefer kernel overlayfs (no mount_program!)
 cat >"$KERNEL_STORAGE_CONF" <<'EOF'
@@ -30,17 +29,6 @@ graphroot = "/var/lib/containers/storage"
 
 [storage.options.overlay]
 mountopt = "metacopy=on"
-EOF
-
-# Explicit FUSE fallback (only if kernel overlay fails)
-cat >"$FUSE_STORAGE_CONF" <<'EOF'
-[storage]
-driver = "overlay"
-runroot = "/var/run/containers/storage"
-graphroot = "/var/lib/containers/storage"
-
-[storage.options]
-mount_program = "/usr/bin/fuse-overlayfs"
 EOF
 
 # Tell Podman exactly which config to use:
@@ -59,15 +47,6 @@ for i in {1..20}; do
   [ -S "$SOCK" ] && break
   sleep 0.5
 done
-
-# Verify kernel overlay actually active; else switch to FUSE once
-#if ! podman info 2>/dev/null | grep -q 'Native Overlay Diff: "true"'; then
-#  echo "Kernel overlayfs not active -> switching to fuse-overlayfs"
-#  kill "$PODMAN_PID" || true
-#  export CONTAINERS_STORAGE_CONF="$FUSE_STORAGE_CONF"
-#  podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
-#  PODMAN_PID=$!
-#fi
 
 # Start Forgejo runner registration with the custom config
 export DOCKER_HOST="unix://${SOCK}"
