@@ -38,6 +38,7 @@ export CONTAINERS_STORAGE_CONF="$KERNEL_STORAGE_CONF"
 grep -q overlay /proc/filesystems || true
 
 # Start podman service with kernel overlay config
+export SQLITE_JOURNAL_MODE=DELETE
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
 
