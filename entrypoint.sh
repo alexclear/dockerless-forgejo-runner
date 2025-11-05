@@ -39,6 +39,19 @@ grep -q overlay /proc/filesystems || true
 
 # Start podman service with kernel overlay config
 export SQLITE_JOURNAL_MODE=DELETE
+rm -rf /var/lib/containers/storage/db.sql*
+
+# Create database on local storage directory  
+mkdir -p /tmp/podman-db
+
+# Start Podman briefly to create the database
+podman info > /dev/null 2>&1
+
+# Move the newly created database to local storage
+if [ -f /var/lib/containers/storage/db.sql ]; then
+    mv /var/lib/containers/storage/db.sql /tmp/podman-db/
+    ln -s /tmp/podman-db/db.sql /var/lib/containers/storage/db.sql
+fi
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
 
