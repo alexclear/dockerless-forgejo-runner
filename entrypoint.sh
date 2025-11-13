@@ -28,7 +28,7 @@ runroot = "/var/run/containers/storage"
 graphroot = "/var/lib/containers/storage"
 
 [storage.options.overlay]
-mountopt = "metacopy=on"
+mountopt = "nodev,metacopy=on"
 EOF
 
 # Tell Podman exactly which config to use:
@@ -41,6 +41,13 @@ grep -q overlay /proc/filesystems || true
 export SQLITE_JOURNAL_MODE=DELETE
 export SQLITE_BUSY_TIMEOUT=300000
 export PRAGMA_LOCKING_MODE=EXCLUSIVE
+
+for db in /var/lib/containers/storage/libpod/*.db; do
+  if [ -f "$db" ]; then
+    sqlite3 "$db" 'PRAGMA journal_mode=DELETE;'
+    echo "Disabled WAL for $db"
+  fi
+done
 
 podman --log-level=debug system service -t 0 > /dev/stdout 2>&1 &
 PODMAN_PID=$!
